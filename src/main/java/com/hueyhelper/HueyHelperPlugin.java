@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-@PluginDescriptor(name = "Huey Helper", description = "Tracks Huey damage and loot", enabledByDefault = true)
+@PluginDescriptor(name = "Huey Helper", description = "Tracks Huey damage and loot")
 public class HueyHelperPlugin extends Plugin {
 	private static final int HUEY_FINISHED = 14012;
 	private static final int HUEY_BODY_START_ID = 14017;
