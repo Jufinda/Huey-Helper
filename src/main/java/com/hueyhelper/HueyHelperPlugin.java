@@ -449,14 +449,17 @@ public class HueyHelperPlugin extends Plugin {
 	@Subscribe public void onStatChanged(StatChanged event) {
 		if (event.getSkill() == Skill.HITPOINTS) {
 			int currentXp = event.getXp();
-			if (previousHpXp != -1) { int diff = currentXp - previousHpXp; if (diff > 0 && wasInArena) addXpDamage(diff); }
+			if (previousHpXp != -1) {
+				int diff = currentXp - previousHpXp;
+				if (diff > 0 && currentFightPhase > 0) addXpDamage(diff); // Swapped wasInArena for currentFightPhase
+			}
 			previousHpXp = currentXp;
 		}
 	}
 
 	@SuppressWarnings("unused")
 	@Subscribe public void onFakeXpDrop(FakeXpDrop event) {
-		if (event.getSkill() == Skill.HITPOINTS && wasInArena) addXpDamage(event.getXp());
+		if (event.getSkill() == Skill.HITPOINTS && currentFightPhase > 0) addXpDamage(event.getXp()); // Swapped here too
 	}
 
 	private void addXpDamage(int hpXpDrop) {
@@ -551,7 +554,7 @@ public class HueyHelperPlugin extends Plugin {
 		SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 		panel.updateLootTrackerUI();
 		new Thread(() -> {
-			try { Thread.sleep(8000); } catch (InterruptedException ignored) {}
+			try { Thread.sleep(15000); } catch (InterruptedException ignored) {}
 			if (!r.eligible) {
 				if (r.loot.equals("Waiting...")) r.loot = "None";
 				if (r.totalLoot.equals("Waiting...")) r.totalLoot = "N/A";
@@ -656,7 +659,21 @@ public class HueyHelperPlugin extends Plugin {
 				try {
 					List<ItemPrice> results = itemManager.search(drop);
 					if (results != null && !results.isEmpty()) {
-						int searchId = results.get(0).getId();
+						int searchId = -1;
+
+						// Loop through the search results to find the EXACT match
+						for (ItemPrice result : results) {
+							if (result.getName().equalsIgnoreCase(drop)) {
+								searchId = result.getId();
+								break;
+							}
+						}
+
+						// If it somehow can't find an exact match, fallback to the first result
+						if (searchId == -1) {
+							searchId = results.get(0).getId();
+						}
+
 						itemLookupCache.put(nameKey, searchId);
 						itemNameCache.put(searchId, drop);
 						processPersonalLoot(searchId, qty, drop);
