@@ -105,6 +105,8 @@ public class HueyHelperPlugin extends Plugin {
 	@Inject private HueyHelperDebugOverlay debugOverlay;
 	@Inject private ClientThread clientThread;
 
+	@Inject private HueyHelperSceneOverlay sceneOverlay; // The new one we just made!
+
 	private HueyPanel panel;
 	private NavigationButton navButton;
 	private boolean fightEnded;
@@ -152,9 +154,23 @@ public class HueyHelperPlugin extends Plugin {
 	@Provides HueyHelperConfig provideConfig(ConfigManager cm) { return cm.getConfig(HueyHelperConfig.class); }
 	public HueyHelperConfig getConfig() { return config; }
 
-	// --- MISSING GETTERS RESTORED HERE ---
+	// --- GETTERS ---
 	public int getCurrentFightPhase() { return currentFightPhase; }
 	public Set<Integer> getArenaTiles() { return ARENA_TILES; }
+
+	// --- NEW: BOSS SCANNER FOR OVERLAY ---
+	public List<NPC> getHueycoatlBodyParts() {
+		List<NPC> bodyParts = new ArrayList<>();
+		for (NPC npc : client.getNpcs()) {
+			if (npc.getName() != null && npc.getName().toLowerCase().contains("hueycoatl")) {
+				// >= HUEY_BODY_START_ID ensures it grabs ALL body pieces, but ignores the head/tail
+				if (npc.getId() >= HUEY_BODY_START_ID) {
+					bodyParts.add(npc);
+				}
+			}
+		}
+		return bodyParts;
+	}
 
 	// --- DYNAMIC SESSION STATS ---
 	public int getSessionKills() {
@@ -232,6 +248,8 @@ public class HueyHelperPlugin extends Plugin {
 		loadPersistentData();
 		overlayManager.add(overlay);
 		overlayManager.add(debugOverlay);
+		overlayManager.add(sceneOverlay);
+
 		panel = new HueyPanel(this);
 		greenTickImg = createTickCrossIcon(Color.GREEN, true);
 		redCrossImg = createTickCrossIcon(Color.RED, false);
@@ -252,6 +270,8 @@ public class HueyHelperPlugin extends Plugin {
 	protected void shutDown() {
 		overlayManager.remove(overlay);
 		overlayManager.remove(debugOverlay);
+		overlayManager.remove(sceneOverlay);
+
 		clientToolbar.removeNavigation(navButton);
 		if (arenaInfoBox != null) infoBoxManager.removeInfoBox(arenaInfoBox);
 		if (eligibilityInfoBox != null) infoBoxManager.removeInfoBox(eligibilityInfoBox);
@@ -650,18 +670,25 @@ public class HueyHelperPlugin extends Plugin {
 		}
 	}
 
-	private void processPersonalLoot(int id, int qty, String exactName) {
-		String name = itemNameCache.getOrDefault(id, exactName).replace(",", "");
+	private void processPersonalLoot(int rawId, int qty, String exactName) {
+		int id = itemManager.canonicalize(rawId);
+		String name = itemManager.getItemComposition(id).getName().replace(",", "");
 		String dropStr = qty + " x " + name;
+
 		if (currentPersonalLoot.contains(dropStr)) return;
-		currentPersonalLoot.add(dropStr); sessionLootTracker.put(id, sessionLootTracker.getOrDefault(id, 0) + qty);
+
+		currentPersonalLoot.add(dropStr);
+		sessionLootTracker.put(id, sessionLootTracker.getOrDefault(id, 0) + qty);
+
 		if (lastLoggedKill != null && System.currentTimeMillis() - lastLoggedKill.timestamp < 30000) {
 			if (!lastLoggedKill.eligible) persistentKillCount++;
 			lastLoggedKill.eligible = true;
 			if (lastLoggedKill.loot.equals("Waiting...") || lastLoggedKill.loot.equals("None")) lastLoggedKill.loot = dropStr;
 			else if (!lastLoggedKill.loot.contains(dropStr)) lastLoggedKill.loot += " | " + dropStr;
 		}
-		savePersistentData(); panel.updateLootTrackerUI(); SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
+		savePersistentData();
+		panel.updateLootTrackerUI();
+		SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 	}
 
 	public void writeToCSV(String fileName, KillRecord singleRecord, boolean append) {

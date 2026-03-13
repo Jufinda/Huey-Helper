@@ -60,6 +60,17 @@ public interface HueyHelperConfig extends Config {
 	@ConfigItem(keyName = "showDropRates", name = "Show Rare Drop Rates", description = "Shows your dynamic drop rates for the unique items", position = 7, section = overlaySection)
 	default boolean showDropRates() { return true; }
 
+	@ConfigItem(
+			position = 8,
+			section = overlaySection,
+			keyName = "highlightBody",
+			name = "Highlight Hueycoatl Body",
+			description = "Draws a visual highlight around the boss's body."
+	)
+	default boolean highlightBody() {
+		return true;
+	}
+
 	// --- SIDE PANEL SETTINGS ---
 	@ConfigItem(keyName = "panelFont", name = "Panel Font", description = "Choose the font style for the entire side panel", position = 1, section = sidePanelSection)
 	default PanelFontType panelFont() { return PanelFontType.BEBAS_NEUE; }
