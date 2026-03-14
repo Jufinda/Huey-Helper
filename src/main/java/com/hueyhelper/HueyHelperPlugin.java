@@ -519,10 +519,6 @@ public class HueyHelperPlugin extends Plugin {
 		if (e.getNpc().getId() == HUEY_FINISHED && !fightEnded) {
 			fightEnded = true;
 			logKill();
-		} else if (fightEnded && e.getNpc().getId() >= HUEY_BODY_START_ID) {
-			resetFight();
-			currentFightPhase = 1;
-			startFightClock();
 		}
 	}
 
