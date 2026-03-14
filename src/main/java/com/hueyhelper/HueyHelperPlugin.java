@@ -418,7 +418,7 @@ public class HueyHelperPlugin extends Plugin {
 	@SuppressWarnings("unused")
 	@Subscribe public void onGameTick(GameTick event) {
 		boolean currentlyInArena = isInArena();
-		if (wasInArena && !currentlyInArena) resetFight();
+		// We removed the resetFight() tripwire here so dodging doesn't wipe your damage!
 		wasInArena = currentlyInArena;
 		updateInfoBoxes();
 
@@ -520,9 +520,14 @@ public class HueyHelperPlugin extends Plugin {
 			fightEnded = true;
 			logKill();
 		} else if (fightEnded && e.getNpc().getId() >= HUEY_BODY_START_ID) {
-			resetFight();
-			currentFightPhase = 1;
-			startFightClock();
+			// If we ALREADY have damage, we are clearly mid-fight. Don't reset!
+			if (bodyXpAccumulator > 0 || headTailHitsplatDamage > 0) {
+				fightEnded = false;
+			} else {
+				resetFight();
+				currentFightPhase = 1;
+				startFightClock();
+			}
 		}
 	}
 
