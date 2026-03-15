@@ -766,13 +766,19 @@ public class HueyHelperPlugin extends Plugin {
 		public String getRareDropRateString() {
 			if (!eligible) return "N/A";
 			String lowerLoot = loot.toLowerCase();
-			boolean hasHide = lowerLoot.contains("hueycoatl hide"); boolean hasTome = lowerLoot.contains("tome of earth");
-			boolean hasWand = lowerLoot.contains("hueycoatl wand"); boolean hasPet = lowerLoot.contains("huberte") || lowerLoot.contains("funny feeling");
+
+			// Updated to match exact OSRS item names (lowercased!)
+			boolean hasHide = lowerLoot.contains("hueycoatl hide");
+			boolean hasTome = lowerLoot.contains("tome of earth (empty)");
+			boolean hasWand = lowerLoot.contains("dragon hunter wand");
+			boolean hasPet = lowerLoot.contains("huberte") || lowerLoot.contains("funny feeling");
+
 			if (!hasHide && !hasTome && !hasWand && !hasPet) return "N/A";
 
 			double dropMathContrib = Math.max(Math.min((bodyDmg + headTailDmg) / 4050.0, 1.0), 0.05);
 			DecimalFormat df = new DecimalFormat("#.##");
 			List<String> rates = new ArrayList<>();
+
 			if (hasHide) rates.add("Hide: 1/" + df.format(28.64 / dropMathContrib));
 			if (hasTome) rates.add("Tome: 1/" + df.format(90.0 / dropMathContrib));
 			if (hasWand) rates.add("Wand: 1/" + df.format(105.0 / dropMathContrib));
