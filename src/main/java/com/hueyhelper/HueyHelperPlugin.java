@@ -105,7 +105,7 @@ public class HueyHelperPlugin extends Plugin {
 	@Inject private HueyHelperDebugOverlay debugOverlay;
 	@Inject private ClientThread clientThread;
 
-	@Inject private HueyHelperSceneOverlay sceneOverlay; // The new one we just made!
+	@Inject private HueyHelperSceneOverlay sceneOverlay;
 
 	private HueyPanel panel;
 	private NavigationButton navButton;
@@ -148,7 +148,10 @@ public class HueyHelperPlugin extends Plugin {
 	public int persistentKillCount = 0;
 	private KillRecord lastLoggedKill = null;
 	private int currentKc = 0;
-	private final List<String> currentPersonalLoot = new ArrayList<>();
+
+	// CHANGE 1: Changed from a List<String> to a Map<String, Integer> to handle duplicate unnoted items
+	private final Map<String, Integer> currentPersonalLoot = new LinkedHashMap<>();
+
 	private final List<String> currentGroupLoot = new ArrayList<>();
 
 	@Provides HueyHelperConfig provideConfig(ConfigManager cm) { return cm.getConfig(HueyHelperConfig.class); }
@@ -163,7 +166,6 @@ public class HueyHelperPlugin extends Plugin {
 		List<NPC> bodyParts = new ArrayList<>();
 		for (NPC npc : client.getNpcs()) {
 			if (npc.getName() != null && npc.getName().toLowerCase().contains("hueycoatl")) {
-				// >= HUEY_BODY_START_ID ensures it grabs ALL body pieces, but ignores the head/tail
 				if (npc.getId() >= HUEY_BODY_START_ID) {
 					bodyParts.add(npc);
 				}
@@ -451,7 +453,7 @@ public class HueyHelperPlugin extends Plugin {
 			int currentXp = event.getXp();
 			if (previousHpXp != -1) {
 				int diff = currentXp - previousHpXp;
-				if (diff > 0 && currentFightPhase > 0) addXpDamage(diff); // Swapped wasInArena for currentFightPhase
+				if (diff > 0 && currentFightPhase > 0) addXpDamage(diff);
 			}
 			previousHpXp = currentXp;
 		}
@@ -459,7 +461,7 @@ public class HueyHelperPlugin extends Plugin {
 
 	@SuppressWarnings("unused")
 	@Subscribe public void onFakeXpDrop(FakeXpDrop event) {
-		if (event.getSkill() == Skill.HITPOINTS && currentFightPhase > 0) addXpDamage(event.getXp()); // Swapped here too
+		if (event.getSkill() == Skill.HITPOINTS && currentFightPhase > 0) addXpDamage(event.getXp());
 	}
 
 	private void addXpDamage(int hpXpDrop) {
@@ -540,7 +542,10 @@ public class HueyHelperPlugin extends Plugin {
 
 		r.contribution = Math.min(Math.max((finalBodyDmg + finalHeadTailDmg)/4050.0, 0.05), 1.0);
 		r.kc = currentKc;
-		r.loot = currentPersonalLoot.isEmpty() ? "Waiting..." : String.join(" | ", currentPersonalLoot);
+
+		// CHANGE 2: Call the new helper method instead of String.join directly
+		r.loot = getFormattedPersonalLoot();
+
 		r.totalLoot = currentGroupLoot.isEmpty() ? "Waiting..." : String.join(" | ", currentGroupLoot);
 
 		killLog.add(r); lastLoggedKill = r;
@@ -638,67 +643,43 @@ public class HueyHelperPlugin extends Plugin {
 			SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 		}
 
-		int receivedIdx = lowerMsg.indexOf("you received:");
-		if (receivedIdx != -1) {
-			String drop = cleanMessage.substring(receivedIdx + 13).trim();
-			int qty = 1;
-			if (drop.toLowerCase().contains(" x ")) {
-				String[] parts = drop.split("(?i) x ", 2);
-				try { qty = Integer.parseInt(parts[0].replaceAll("[^0-9]", "")); } catch (Exception ignored) {}
-				if (parts.length > 1) drop = parts[1].trim();
-			}
-			String nameKey = drop.toLowerCase();
-			Integer cachedId = itemLookupCache.get(nameKey);
-			if (cachedId != null) {
-				processPersonalLoot(cachedId, qty, drop);
-			} else {
-				try {
-					List<ItemPrice> results = itemManager.search(drop);
-					if (results != null && !results.isEmpty()) {
-						int searchId = -1;
-
-						// Loop through the search results to find the EXACT match
-						for (ItemPrice result : results) {
-							if (result.getName().equalsIgnoreCase(drop)) {
-								searchId = result.getId();
-								break;
-							}
-						}
-
-						// If it somehow can't find an exact match, fallback to the first result
-						if (searchId == -1) {
-							searchId = results.get(0).getId();
-						}
-
-						itemLookupCache.put(nameKey, searchId);
-						itemNameCache.put(searchId, drop);
-						processPersonalLoot(searchId, qty, drop);
-						return;
-					}
-				} catch (Exception ignored) {}
-				if (nameKey.contains("huberte")) processPersonalLoot(29489, qty, "Huberte");
-				else if (nameKey.contains("clue scroll")) processPersonalLoot(12158, qty, "Clue scroll");
-				else { pendingLootDrops.put(nameKey, pendingLootDrops.getOrDefault(nameKey, 0) + qty); pendingLootDropsTimer = 100; }
-			}
+// Catch the pet explicitly, as pets bypass the standard NpcLootReceived event
+		if (lowerMsg.contains("funny feeling") || lowerMsg.contains("feel something weird sneaking into your backpack")) {
+			processPersonalLoot(29489, 1, "Huberte"); // 29489 is the Item ID for Huberte
 		}
 	}
 
+	// CHANGE 3: New helper method to iterate over the Map and construct the final String
+	private String getFormattedPersonalLoot() {
+		if (currentPersonalLoot.isEmpty()) return "Waiting...";
+		List<String> formatted = new ArrayList<>();
+		for (Map.Entry<String, Integer> entry : currentPersonalLoot.entrySet()) {
+			formatted.add(entry.getValue() + " x " + entry.getKey());
+		}
+		return String.join(" | ", formatted);
+	}
+
+	// CHANGE 4: Complete rewrite of processPersonalLoot to properly increment identical drops natively
 	private void processPersonalLoot(int rawId, int qty, String exactName) {
 		int id = itemManager.canonicalize(rawId);
 		String name = itemManager.getItemComposition(id).getName().replace(",", "");
-		String dropStr = qty + " x " + name;
 
-		if (currentPersonalLoot.contains(dropStr)) return;
+		// Add to our new Map (aggregating quantities if it drops multiple times unnoted)
+		currentPersonalLoot.put(name, currentPersonalLoot.getOrDefault(name, 0) + qty);
 
-		currentPersonalLoot.add(dropStr);
+		// Add to the session tracker
 		sessionLootTracker.put(id, sessionLootTracker.getOrDefault(id, 0) + qty);
+
+		// Get the newly formatted string with combined totals
+		String fullLootString = getFormattedPersonalLoot();
 
 		if (lastLoggedKill != null && System.currentTimeMillis() - lastLoggedKill.timestamp < 30000) {
 			if (!lastLoggedKill.eligible) persistentKillCount++;
 			lastLoggedKill.eligible = true;
-			if (lastLoggedKill.loot.equals("Waiting...") || lastLoggedKill.loot.equals("None")) lastLoggedKill.loot = dropStr;
-			else if (!lastLoggedKill.loot.contains(dropStr)) lastLoggedKill.loot += " | " + dropStr;
+			// Overwrite the loot string on the record with the newly aggregated one
+			lastLoggedKill.loot = fullLootString;
 		}
+
 		savePersistentData();
 		panel.updateLootTrackerUI();
 		SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
@@ -767,7 +748,6 @@ public class HueyHelperPlugin extends Plugin {
 			if (!eligible) return "N/A";
 			String lowerLoot = loot.toLowerCase();
 
-			// Updated to match exact OSRS item names (lowercased!)
 			boolean hasHide = lowerLoot.contains("hueycoatl hide");
 			boolean hasTome = lowerLoot.contains("tome of earth (empty)");
 			boolean hasWand = lowerLoot.contains("dragon hunter wand");
