@@ -255,7 +255,7 @@ public class HueyHelperPlugin extends Plugin {
 		panel = new HueyPanel(this);
 		greenTickImg = createTickCrossIcon(Color.GREEN, true);
 		redCrossImg = createTickCrossIcon(Color.RED, false);
-		try (InputStream stream = getClass().getResourceAsStream("/infobox_icon.png")) {
+		try (InputStream stream = getClass().getResourceAsStream("/Infobox_icon.png")) {
 			if (stream != null) customIcon = ImageIO.read(stream);
 		} catch (Exception ignored) {}
 		BufferedImage navIcon = null;
