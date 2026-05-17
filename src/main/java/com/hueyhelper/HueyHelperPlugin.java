@@ -21,7 +21,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.infobox.InfoBox;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.Text;
-import net.runelite.http.api.item.ItemPrice;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
@@ -39,6 +38,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @PluginDescriptor(name = "Huey Helper", description = "Tracks Huey damage and loot")
 public class HueyHelperPlugin extends Plugin {
@@ -93,6 +94,37 @@ public class HueyHelperPlugin extends Plugin {
 		}
 	}
 
+	// --- NEW: MECHANIC GUIDE TILES ---
+	public static class GuideTile {
+		public final int rx;
+		public final int ry;
+		public final Color color;
+		public final String label;
+
+		public GuideTile(int rx, int ry, Color color, String label) {
+			this.rx = rx;
+			this.ry = ry;
+			this.color = color;
+			this.label = label;
+		}
+	}
+
+	private static final List<GuideTile> GUIDE_TILES = new ArrayList<>();
+	static {
+		GUIDE_TILES.add(new GuideTile(36, 21, new Color(0, 255, 0), "Click on tail when wave is here"));
+		GUIDE_TILES.add(new GuideTile(45, 22, new Color(29, 0, 255), ""));
+		GUIDE_TILES.add(new GuideTile(44, 23, new Color(0, 255, 0), "Click here when wave is on the blue tile"));
+		GUIDE_TILES.add(new GuideTile(35, 25, new Color(255, 221, 0), "Safespot from right wave"));
+		GUIDE_TILES.add(new GuideTile(36, 25, new Color(255, 221, 0), ""));
+		GUIDE_TILES.add(new GuideTile(42, 25, new Color(255, 221, 0), ""));
+		GUIDE_TILES.add(new GuideTile(43, 25, new Color(255, 221, 0), "Safe Spot from Left Wave"));
+		GUIDE_TILES.add(new GuideTile(38, 23, new Color(255, 221, 0), "Wait here when tail phase is starting"));
+		GUIDE_TILES.add(new GuideTile(34, 17, new Color(255, 255, 0), "When tip of tail reaches here, click to dodge left wave"));
+		GUIDE_TILES.add(new GuideTile(46, 21, new Color(255, 255, 0), "When tip of tail reaches here, click tail to dodge right wave"));
+		GUIDE_TILES.add(new GuideTile(46, 8, new Color(255, 255, 0), "Zoom out and click the boss"));
+	}
+	public List<GuideTile> getGuideTiles() { return GUIDE_TILES; }
+
 	@Inject private Client client;
 	@Inject private ItemManager itemManager;
 	@Inject private HueyHelperConfig config;
@@ -104,7 +136,7 @@ public class HueyHelperPlugin extends Plugin {
 	@Inject private HueyHelperOverlay overlay;
 	@Inject private HueyHelperDebugOverlay debugOverlay;
 	@Inject private ClientThread clientThread;
-
+	@Inject private ScheduledExecutorService executor; // Injected RuneLite Executor
 	@Inject private HueyHelperSceneOverlay sceneOverlay;
 
 	private HueyPanel panel;
@@ -149,9 +181,7 @@ public class HueyHelperPlugin extends Plugin {
 	private KillRecord lastLoggedKill = null;
 	private int currentKc = 0;
 
-	// CHANGE 1: Changed from a List<String> to a Map<String, Integer> to handle duplicate unnoted items
 	private final Map<String, Integer> currentPersonalLoot = new LinkedHashMap<>();
-
 	private final List<String> currentGroupLoot = new ArrayList<>();
 
 	@Provides HueyHelperConfig provideConfig(ConfigManager cm) { return cm.getConfig(HueyHelperConfig.class); }
@@ -161,7 +191,6 @@ public class HueyHelperPlugin extends Plugin {
 	public int getCurrentFightPhase() { return currentFightPhase; }
 	public Set<Integer> getArenaTiles() { return ARENA_TILES; }
 
-	// --- NEW: BOSS SCANNER FOR OVERLAY ---
 	public List<NPC> getHueycoatlBodyParts() {
 		List<NPC> bodyParts = new ArrayList<>();
 		for (NPC npc : client.getNpcs()) {
@@ -174,7 +203,6 @@ public class HueyHelperPlugin extends Plugin {
 		return bodyParts;
 	}
 
-	// --- DYNAMIC SESSION STATS ---
 	public int getSessionKills() {
 		int count = 0;
 		for (KillRecord r : killLog) {
@@ -543,9 +571,7 @@ public class HueyHelperPlugin extends Plugin {
 		r.contribution = Math.min(Math.max((finalBodyDmg + finalHeadTailDmg)/4050.0, 0.05), 1.0);
 		r.kc = currentKc;
 
-		// CHANGE 2: Call the new helper method instead of String.join directly
 		r.loot = getFormattedPersonalLoot();
-
 		r.totalLoot = currentGroupLoot.isEmpty() ? "Waiting..." : String.join(" | ", currentGroupLoot);
 
 		killLog.add(r); lastLoggedKill = r;
@@ -554,8 +580,9 @@ public class HueyHelperPlugin extends Plugin {
 
 		SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 		panel.updateLootTrackerUI();
-		new Thread(() -> {
-			try { Thread.sleep(15000); } catch (InterruptedException ignored) {}
+
+		// Swapped the raw Thread.sleep for RuneLite's Executor!
+		executor.schedule(() -> {
 			if (!r.eligible) {
 				if (r.loot.equals("Waiting...")) r.loot = "None";
 				if (r.totalLoot.equals("Waiting...")) r.totalLoot = "N/A";
@@ -565,7 +592,7 @@ public class HueyHelperPlugin extends Plugin {
 			}
 			if (config.autoSaveKills()) writeToCSV("HueyHelperLog_" + getAccountName() + "_autosave.csv", r, true);
 			SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
-		}).start();
+		}, 15, TimeUnit.SECONDS);
 	}
 
 	@SuppressWarnings("unused")
@@ -643,13 +670,11 @@ public class HueyHelperPlugin extends Plugin {
 			SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 		}
 
-// Catch the pet explicitly, as pets bypass the standard NpcLootReceived event
 		if (lowerMsg.contains("funny feeling") || lowerMsg.contains("feel something weird sneaking into your backpack")) {
-			processPersonalLoot(29489, 1, "Huberte"); // 29489 is the Item ID for Huberte
+			processPersonalLoot(29489, 1, "Huberte");
 		}
 	}
 
-	// CHANGE 3: New helper method to iterate over the Map and construct the final String
 	private String getFormattedPersonalLoot() {
 		if (currentPersonalLoot.isEmpty()) return "Waiting...";
 		List<String> formatted = new ArrayList<>();
@@ -659,24 +684,17 @@ public class HueyHelperPlugin extends Plugin {
 		return String.join(" | ", formatted);
 	}
 
-	// CHANGE 4: Complete rewrite of processPersonalLoot to properly increment identical drops natively
 	private void processPersonalLoot(int rawId, int qty, String exactName) {
 		int id = itemManager.canonicalize(rawId);
 		String name = itemManager.getItemComposition(id).getName().replace(",", "");
 
-		// Add to our new Map (aggregating quantities if it drops multiple times unnoted)
 		currentPersonalLoot.put(name, currentPersonalLoot.getOrDefault(name, 0) + qty);
-
-		// Add to the session tracker
 		sessionLootTracker.put(id, sessionLootTracker.getOrDefault(id, 0) + qty);
-
-		// Get the newly formatted string with combined totals
 		String fullLootString = getFormattedPersonalLoot();
 
 		if (lastLoggedKill != null && System.currentTimeMillis() - lastLoggedKill.timestamp < 30000) {
 			if (!lastLoggedKill.eligible) persistentKillCount++;
 			lastLoggedKill.eligible = true;
-			// Overwrite the loot string on the record with the newly aggregated one
 			lastLoggedKill.loot = fullLootString;
 		}
 

@@ -71,6 +71,29 @@ public interface HueyHelperConfig extends Config {
 		return true;
 	}
 
+	@ConfigItem(
+			position = 9,
+			section = overlaySection,
+			keyName = "showTileMarkers",
+			name = "Show Arena Tile Markers",
+			description = "Highlights the floor tiles to help learn boss mechanics"
+	)
+	default boolean showTileMarkers() {
+		return true;
+	}
+
+	@ConfigItem(
+			position = 10,
+			section = overlaySection,
+			keyName = "showTileText",
+			name = "Show Mechanic Text",
+			description = "Displays the mechanic instructions hovering over the guide tiles"
+
+	)
+	default boolean showTileText() {
+		return true;
+	}
+
 	// --- SIDE PANEL SETTINGS ---
 	@ConfigItem(keyName = "panelFont", name = "Panel Font", description = "Choose the font style for the entire side panel", position = 1, section = sidePanelSection)
 	default PanelFontType panelFont() { return PanelFontType.BEBAS_NEUE; }

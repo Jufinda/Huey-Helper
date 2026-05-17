@@ -12,6 +12,7 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 import javax.inject.Inject;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -41,11 +42,11 @@ public class HueyHelperDebugOverlay extends OverlayPanel
 
         if (!showBox && !showTiles) return null;
 
-        // Grab the modern WorldView to handle coordinates (Fixes the deprecation warnings!)
+        // Grab the modern WorldView to handle coordinates safely
         WorldView wv = client.getTopLevelWorldView();
         if (wv == null) return null;
 
-        // 1. Draw your exact custom tiles, translated for the instance!
+        // 1. Loop through and draw each background tile individually to snap them to the floor
         if (showTiles) {
             int z = wv.getPlane();
             for (int packed : plugin.getArenaTiles()) {
@@ -55,7 +56,7 @@ public class HueyHelperDebugOverlay extends OverlayPanel
             }
         }
 
-        // 2. Render the Debug Box
+        // 2. Render the Debug Text Box
         if (showBox) {
             panelComponent.getChildren().clear();
             panelComponent.getChildren().add(TitleComponent.builder().text("Huey Debugger").color(Color.YELLOW).build());
@@ -76,29 +77,33 @@ public class HueyHelperDebugOverlay extends OverlayPanel
         return null;
     }
 
+    /**
+     * Translates a specific coordinate into the current instance and draws it snapped directly to the ground.
+     */
     private void drawTile(Graphics2D graphics, WorldView wv, int wx, int wy, int plane) {
         WorldPoint templateWp = new WorldPoint(wx, wy, plane);
 
-        // Uses the new modern WorldView coordinate system
+        // Translate the static region points safely into the instanced world view
         Collection<WorldPoint> activePoints = WorldPoint.toLocalInstance(wv, templateWp);
 
         for (WorldPoint activeWp : activePoints) {
             LocalPoint lp = LocalPoint.fromWorld(wv, activeWp);
 
             if (lp != null) {
-                // Draw a perfectly glued-to-the-ground green tile
+                // Get the individual 3D canvas tile polygon from the local height map
                 Polygon poly = Perspective.getCanvasTilePoly(client, lp);
                 if (poly != null) {
-                    graphics.setColor(new Color(0, 255, 0, 40));
-                    graphics.drawPolygon(poly);
-                    graphics.setColor(new Color(0, 255, 0, 15));
+                    graphics.setStroke(new BasicStroke(1));
+                    graphics.setColor(new Color(0, 255, 255, 30)); // Subtle Cyan fill
                     graphics.fillPolygon(poly);
+                    graphics.setColor(new Color(0, 255, 255, 90)); // Clean Cyan outline
+                    graphics.drawPolygon(poly);
                 }
 
-                // Draw it on the minimap
+                // Match the visual tracking directly onto the game minimap
                 Point minimapPoint = Perspective.localToMinimap(client, lp);
                 if (minimapPoint != null) {
-                    graphics.setColor(new Color(0, 255, 0, 60));
+                    graphics.setColor(new Color(0, 255, 255, 60));
                     graphics.fillRect(minimapPoint.getX(), minimapPoint.getY(), 1, 1);
                 }
             }
