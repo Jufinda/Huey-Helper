@@ -106,6 +106,17 @@ public interface HueyHelperConfig extends Config {
 	@ConfigItem(keyName = "autoSaveKills", name = "Auto-save CSV Log", description = "Automatically updates the CSV file after every kill", position = 2, section = otherSection)
 	default boolean autoSaveKills() { return true; }
 
+	@ConfigItem(
+			keyName = "autoHidePanel",
+			name = "Auto-Hide Plugin Panel",
+			description = "Hides the sidebar icon when you aren't in The Darkfrost",
+			position = 3,
+			section = otherSection
+	)
+	default boolean autoHidePanel() {
+		return false;
+	}
+
 	// --- DEBUG SETTINGS ---
 
 	@ConfigItem(keyName = "debugStateBox", name = "Show Arena and State", description = "Shows the live State Machine data box in the top right", position = 1, section = debugSection)

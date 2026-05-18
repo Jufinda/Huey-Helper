@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 public class HueyHelperPlugin extends Plugin {
 	private static final int HUEY_FINISHED = 14012;
 	private static final int HUEY_BODY_START_ID = 14017;
+	private boolean isPanelAdded = false;
 
 	private static final Set<Integer> ARENA_TILES = new HashSet<>();
 	static {
@@ -273,6 +274,35 @@ public class HueyHelperPlugin extends Plugin {
 		return new File(System.getProperty("user.home"), ".runelite/Huey_Helper_Session_Logs/" + getAccountName());
 	}
 
+	// --- PANEL AUTO-HIDE ENGINE ---
+	private void updatePanelVisibility() {
+		if (navButton == null) return;
+
+		boolean shouldShow = true;
+
+		if (config != null && config.autoHidePanel()) {
+			shouldShow = false;
+
+			if (client.getGameState() == GameState.LOGGED_IN) {
+				Player lp = client.getLocalPlayer();
+				if (lp != null && lp.getLocalLocation() != null) {
+					WorldPoint wp = WorldPoint.fromLocalInstance(client, lp.getLocalLocation());
+					if (wp != null && wp.getRegionID() == 5939) {
+						shouldShow = true;
+					}
+				}
+			}
+		}
+
+		if (shouldShow && !isPanelAdded) {
+			clientToolbar.addNavigation(navButton);
+			isPanelAdded = true;
+		} else if (!shouldShow && isPanelAdded) {
+			clientToolbar.removeNavigation(navButton);
+			isPanelAdded = false;
+		}
+	}
+
 	@Override
 	protected void startUp() {
 		loadPersistentData();
@@ -291,8 +321,13 @@ public class HueyHelperPlugin extends Plugin {
 			if (stream != null) navIcon = ImageIO.read(stream);
 		} catch (Exception ignored) {}
 		if (navIcon == null) navIcon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+
 		navButton = NavigationButton.builder().tooltip("Huey Helper").icon(navIcon).panel(panel).build();
-		clientToolbar.addNavigation(navButton);
+
+		// Trigger the visibility checker instead of unconditionally adding it
+		isPanelAdded = false;
+		updatePanelVisibility();
+
 		updateInfoBoxes();
 	}
 
@@ -303,6 +338,8 @@ public class HueyHelperPlugin extends Plugin {
 		overlayManager.remove(sceneOverlay);
 
 		clientToolbar.removeNavigation(navButton);
+		isPanelAdded = false;
+
 		if (arenaInfoBox != null) infoBoxManager.removeInfoBox(arenaInfoBox);
 		if (eligibilityInfoBox != null) infoBoxManager.removeInfoBox(eligibilityInfoBox);
 	}
@@ -423,6 +460,7 @@ public class HueyHelperPlugin extends Plugin {
 	@SuppressWarnings("unused")
 	@Subscribe public void onConfigChanged(ConfigChanged event) {
 		if (event.getGroup().equals("hueyhelper")) {
+			updatePanelVisibility();
 			if (event.getKey().equals("panelFont") && panel != null) panel.updateAllFonts();
 			updateInfoBoxes();
 		}
@@ -430,6 +468,7 @@ public class HueyHelperPlugin extends Plugin {
 
 	@SuppressWarnings("unused")
 	@Subscribe public void onGameStateChanged(GameStateChanged event) {
+		updatePanelVisibility();
 		if (event.getGameState() == GameState.LOGGED_IN) previousHpXp = client.getSkillExperience(Skill.HITPOINTS);
 		else previousHpXp = -1;
 	}
@@ -447,6 +486,8 @@ public class HueyHelperPlugin extends Plugin {
 
 	@SuppressWarnings("unused")
 	@Subscribe public void onGameTick(GameTick event) {
+		updatePanelVisibility();
+
 		boolean currentlyInArena = isInArena();
 		if (wasInArena && !currentlyInArena) resetFight();
 		wasInArena = currentlyInArena;
@@ -581,7 +622,6 @@ public class HueyHelperPlugin extends Plugin {
 		SwingUtilities.invokeLater(() -> panel.updateKillLogUI());
 		panel.updateLootTrackerUI();
 
-		// Swapped the raw Thread.sleep for RuneLite's Executor!
 		executor.schedule(() -> {
 			if (!r.eligible) {
 				if (r.loot.equals("Waiting...")) r.loot = "None";
