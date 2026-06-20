@@ -15,6 +15,7 @@ import java.util.Collection;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.api.GraphicsObject;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
@@ -89,6 +90,35 @@ public class HueyHelperSceneOverlay extends Overlay {
 
                     if (config.showTileText() && tile.label != null && !tile.label.isEmpty()) {
                         renderWrappedText(graphics, lp, tile.label, tile.color);
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // FEATURE: WAVE TRUE TILES (SPOT ANIMATIONS)
+        // ==========================================
+        if (config.showWaveTrueTiles()) {
+            for (GraphicsObject go : client.getGraphicsObjects()) {
+                int goId = go.getId();
+
+                // Targeting the complete range of wave spot animation IDs: 2977 through 2984
+                if (goId >= 2977 && goId <= 2984) {
+
+                    // Only draw the outline if the wave is actively rendering on this tile
+                    if (go.getStartCycle() <= client.getGameCycle() && !go.finished()) {
+                        LocalPoint lp = go.getLocation();
+                        if (lp != null) {
+                            Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+                            if (poly != null) {
+                                // Draw a sharp, solid red outline with no inner fill
+                                graphics.setStroke(new BasicStroke(2));
+                                graphics.setColor(new Color(255, 0, 0, 0));
+                                graphics.fillPolygon(poly);
+                                graphics.setColor(new Color(255, 0, 0, 255));
+                                graphics.drawPolygon(poly);
+                            }
+                        }
                     }
                 }
             }
