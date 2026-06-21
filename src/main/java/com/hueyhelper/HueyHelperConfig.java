@@ -94,17 +94,6 @@ public interface HueyHelperConfig extends Config {
 		return true;
 	}
 
-	@ConfigItem(
-			position = 11,
-			section = overlaySection,
-			keyName = "showWaveTrueTiles",
-			name = "Show Wave Tiles",
-			description = "Highlights the dangerous tiles during the tail slam wave mechanic"
-	)
-	default boolean showWaveTrueTiles() {
-		return true;
-	}
-
 	// --- SIDE PANEL SETTINGS ---
 	@ConfigItem(keyName = "panelFont", name = "Panel Font", description = "Choose the font style for the entire side panel", position = 1, section = sidePanelSection)
 	default PanelFontType panelFont() { return PanelFontType.BEBAS_NEUE; }
@@ -138,5 +127,4 @@ public interface HueyHelperConfig extends Config {
 
 	@ConfigItem(keyName = "debugHighlightedArena", name = "Show Highlighted arena", description = "Draws the green safe zone tiles on the floor and minimap", position = 3, section = debugSection)
 	default boolean debugHighlightedArena() { return false; }
-
 }
