@@ -29,6 +29,33 @@ Every single kill is automatically parsed and saved to a `.csv` file on your loc
 * **Custom Fonts:** Choose from multiple built-in RuneLite fonts or premium custom fonts (like Quill or Bebas Neue) to make your panel look exactly how you want.
 * **Collapsible Menus:** Keep your sidebar clean by collapsing the Loot Tracker, Session Stats, or Fight Stats.
 
+---
+
+## 🐉 Drop Mechanics & Eligibility Tracking
+Thanks to extensive session logging and research, Huey Helper tracks your drop eligibility using the exact mechanics utilized by the game servers. The requirements for receiving loot change dynamically based on the size of your team:
+
+### Small Groups (1 to 5 Players)
+To be eligible for a drop, you must meet **both** damage thresholds:
+* Deal **25+ damage** in Phase 1 (Body)
+* Deal **75+ damage** in Phase 2 (Head/Tail)
+
+### Masses (6+ Players)
+Jagex implements a "mass protection" mechanic for larger groups. To be eligible for a drop, you must meet **either** of the following:
+* Deal **25+ damage** in Phase 1 (Body)
+* **OR** deal **75+ Total Damage** combined across the entire fight.
+
+### The 95% Penalty
+If you reach the 75 Total Damage threshold in a mass, but fail to deal 25 damage to the body in Phase 1, you will still receive a drop! However, your drop quantity and pet chance will be penalized by **95%**, dropping you to the minimum **5% loot floor**. Huey Helper automatically detects this penalty, adjusts your expected reward percentage, and correctly recalculates your rare drop rates to reflect the penalty.
+
+---
+
+## ⚠️ Known Limitations: Mass Lobbies & Overkill Damage
+Due to how Old School RuneScape works server side, damage tracking relies on local hitsplats:
+* **Server PID Priority:** If your attack lands on the final tick, your client may display a full hitsplat (e.g., 25 damage), but the server may award the remaining boss HP to another player based on PID priority, although the plugin tracks this damage, you'd technically contribute 0 damage server side.
+* **Tracking Impact:** In rare instances during mass kills, the overlay may show that you met the Phase 1/Phase 2 threshold even if the server registered your actual contribution as lower, potentially causing you to fail the kill.
+
+> **Note:** This is a standard client-side estimation constraint across OSRS tracking plugins and does not affect your actual server-side loot eligibility or drop rates.
+
 ## Support & Feedback
 If you encounter any bugs, have feature requests, or want to contribute, feel free to open an issue on the GitHub repository!
 

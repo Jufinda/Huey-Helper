@@ -51,9 +51,11 @@ public class HueyHelperOverlay extends OverlayPanel
 
         boolean phase1Passed = myBody >= 25;
         boolean phase2Passed = myHeadTail >= 75;
+        boolean totalPassed = myTotal >= 75; // <--- ADD THIS
         boolean isMass = pCount >= 6;
 
-        boolean isEligible = isMass ? (phase1Passed || phase2Passed) : (phase1Passed && phase2Passed);
+// Check Total Damage instead of Phase 2 alone for Masses:
+        boolean isEligible = isMass ? (phase1Passed || totalPassed) : (phase1Passed && phase2Passed);
 
         if (config.showPhaseDamage())
         {
@@ -63,7 +65,8 @@ public class HueyHelperOverlay extends OverlayPanel
             Color bodyColor = phase1Passed ? Color.GREEN : Color.RED;
             Color headTailColor;
 
-            if (phase2Passed) {
+            // Turn Phase 2 text green if total damage passes in mass
+            if (phase2Passed || (isMass && totalPassed)) {
                 headTailColor = Color.GREEN;
             } else if (isMass && phase1Passed) {
                 headTailColor = Color.GRAY;
@@ -109,14 +112,14 @@ public class HueyHelperOverlay extends OverlayPanel
             {
                 double dropMathContrib = Math.max(Math.min((double) myTotal / TOTAL_HP, 1.0), 0.05);
 
-                double petPenalty = phase1Passed ? 1.0 : 20.0;
+                // Keep the color change for visual feedback, but remove the redundant 20x multiplier
                 Color petColor = phase1Passed ? Color.GREEN : Color.ORANGE;
                 Color dropColor = Color.GREEN;
 
                 panelComponent.getChildren().add(LineComponent.builder().left("Hide:").right("~1/" + df.format(28.64 / dropMathContrib)).rightColor(dropColor).build());
                 panelComponent.getChildren().add(LineComponent.builder().left("Tome:").right("~1/" + df.format(90.0 / dropMathContrib)).rightColor(dropColor).build());
                 panelComponent.getChildren().add(LineComponent.builder().left("Wand:").right("~1/" + df.format(105.0 / dropMathContrib)).rightColor(dropColor).build());
-                panelComponent.getChildren().add(LineComponent.builder().left("Pet:").right("~1/" + df.format((400.0 / dropMathContrib) * petPenalty)).rightColor(petColor).build());
+                panelComponent.getChildren().add(LineComponent.builder().left("Pet:").right("~1/" + df.format(400.0 / dropMathContrib)).rightColor(petColor).build());
             }
         }
 

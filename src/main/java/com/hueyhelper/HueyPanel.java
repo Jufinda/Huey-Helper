@@ -30,7 +30,7 @@ public class HueyPanel extends PluginPanel {
     private final JLabel headTailLabel = new JLabel("0 (0%)");
 
     private final JLabel teamLeftLabel = new JLabel("Team Size:");
-    private final JLabel teamRightLabel = new JLabel("25 Ph1 AND 75 Ph2 dmg");
+    private final JLabel teamRightLabel = new JLabel("25 Ph1 OR 75 Total dmg");
     private final JLabel p1WarnLeftLabel = new JLabel("Phase 1:");
     private final JLabel p1WarnRightLabel = new JLabel("25+ dmg needed");
     private final JLabel p2WarnLeftLabel = new JLabel("Phase 2:");
@@ -322,6 +322,7 @@ public class HueyPanel extends PluginPanel {
         boolean phase1Passed = mb >= 25;
         boolean phase2Passed = mht >= 75;
         boolean phase2Started = mht > 0;
+        boolean totalPassed = mt >= 75; // Added the total damage check here!
 
         teamLeftLabel.setText(teamType + ":");
         teamRightLabel.setForeground(ColorScheme.BRAND_ORANGE);
@@ -340,6 +341,7 @@ public class HueyPanel extends PluginPanel {
         boolean isEligible;
 
         if (p < 6) {
+            // Small Group Logic: Phase 1 AND Phase 2
             teamRightLabel.setText("25 Ph1 AND 75 Ph2 dmg");
             if (phase2Passed) {
                 p2WarnRightLabel.setText("Passed");
@@ -350,25 +352,24 @@ public class HueyPanel extends PluginPanel {
             }
             isEligible = phase1Passed && phase2Passed;
         } else {
-            teamRightLabel.setText("25 Ph1 OR 75 Ph2 dmg");
-            if (phase1Passed) {
-                p2WarnRightLabel.setText("Ignored (Mass)");
+            // Mass Group Logic: Phase 1 OR Total Damage
+            teamRightLabel.setText("25 Ph1 OR 75 Total dmg");
+            if (phase1Passed || totalPassed) {
+                p2WarnRightLabel.setText("Passed");
                 p2WarnRightLabel.setForeground(Color.GREEN);
             } else {
-                if (phase2Passed) {
-                    p2WarnRightLabel.setText("Passed");
-                    p2WarnRightLabel.setForeground(Color.GREEN);
-                } else {
-                    p2WarnRightLabel.setText("75+ dmg needed");
-                    p2WarnRightLabel.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
-                }
+                p2WarnRightLabel.setText("75+ Total dmg needed");
+                p2WarnRightLabel.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
             }
-            isEligible = phase1Passed || phase2Passed;
+            isEligible = phase1Passed || totalPassed;
         }
 
         if (mt > 0 && isEligible) {
             double c = Math.max(Math.min((double)mt/4050.0, 1), 0.05);
-            hideLabel.setText("~1/" + df.format(28.64/c)); tomeLabel.setText("~1/" + df.format(90.0/c)); wandLabel.setText("~1/" + df.format(105.0/c)); petLabel.setText("~1/" + df.format((400.0/c)*(mb < 25 ? 20 : 1)));
+            hideLabel.setText("~1/" + df.format(28.64/c));
+            tomeLabel.setText("~1/" + df.format(90.0/c));
+            wandLabel.setText("~1/" + df.format(105.0/c));
+            petLabel.setText("~1/" + df.format(400.0/c));
         } else {
             hideLabel.setText("N/A"); tomeLabel.setText("N/A"); wandLabel.setText("N/A"); petLabel.setText("N/A");
         }

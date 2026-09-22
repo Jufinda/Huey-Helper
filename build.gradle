@@ -46,7 +46,7 @@ dependencies {
 }
 
 group = 'com.hueyhelper'
-version = '1.18'
+version = '1.19'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
@@ -55,7 +55,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.register('run', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'net.runelite.client.RuneLite'  // <-- change here
+    mainClass = 'net.runelite.client.RuneLite'
 
     jvmArgs "-ea"
     args "--developer-mode", "--debug"

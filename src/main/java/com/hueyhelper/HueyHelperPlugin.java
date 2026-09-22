@@ -366,8 +366,16 @@ public class HueyHelperPlugin extends Plugin {
 		if (customIcon != null) g.drawImage(customIcon, 3, 3, 29, 29, null);
 
 		Color c1 = Color.RED; Color c2 = Color.RED;
-		if (parts >= 6) { if (p1 >= 25) { c1 = Color.GREEN; c2 = Color.GREEN; } else if (p2 >= 75) { c2 = Color.GREEN; } }
-		else { if (p1 >= 25) c1 = Color.GREEN; if (p2 >= 75) c2 = Color.GREEN; }
+		if (parts >= 6) {
+			if (p1 >= 25) {
+				c1 = Color.GREEN; c2 = Color.GREEN;
+			} else if ((p1 + p2) >= 75) {
+				c1 = Color.GREEN; c2 = Color.GREEN;
+			}
+		} else {
+			if (p1 >= 25) c1 = Color.GREEN;
+			if (p2 >= 75) c2 = Color.GREEN;
+		}
 
 		g.setFont(FontManager.getRunescapeSmallFont());
 		FontMetrics fm = g.getFontMetrics();
@@ -756,7 +764,7 @@ public class HueyHelperPlugin extends Plugin {
 
 	public boolean isEligible(int pCount, int bDmg, int htDmg) {
 		if (pCount < 6) return bDmg >= 25 && htDmg >= 75;
-		else return bDmg >= 25 || htDmg >= 75;
+		else return bDmg >= 25 || (bDmg + htDmg) >= 75;
 	}
 
 	public boolean isInArena() {
