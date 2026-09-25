@@ -171,17 +171,14 @@ public class HueyPanel extends PluginPanel {
 
         JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 5, 5));
         buttonPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        JButton exportBtn = new JButton("Export"), folderBtn = new JButton("Folder"), clearBtn = new JButton("Clear");
+        JButton exportBtn = new JButton("Export"), clearBtn = new JButton("Clear");
 
         dynamicFontComponents.add(exportBtn);
-        dynamicFontComponents.add(folderBtn);
         dynamicFontComponents.add(clearBtn);
 
         exportBtn.addActionListener(e -> exportLog());
-        folderBtn.addActionListener(e -> openLogFolder());
         clearBtn.addActionListener(e -> confirmClear());
         buttonPanel.add(exportBtn);
-        buttonPanel.add(folderBtn);
         buttonPanel.add(clearBtn);
         logContainer.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -509,14 +506,6 @@ public class HueyPanel extends PluginPanel {
                 }
             });
         });
-    }
-
-    private void openLogFolder() {
-        try {
-            File dir = plugin.getLogDir();
-            boolean ignored = dir.mkdirs();
-            java.awt.Desktop.getDesktop().open(dir);
-        } catch (Exception ignored) {}
     }
 
     private void exportLog() {
